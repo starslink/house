@@ -35,7 +35,6 @@ class MyApp extends StatelessWidget {
       title: '房屋管理系统',
       theme: ThemeData(
         primaryColor: Colors.black,
-        // fontFamily: 'NotoSansSC',
         scaffoldBackgroundColor: Colors.white,
         colorScheme: const ColorScheme.light(
           primary: Colors.black,

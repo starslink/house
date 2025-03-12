@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/user.dart';
 import '../services/auth_service.dart';
 
@@ -20,8 +21,8 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    if (AuthService.isLoggedIn()) {
-      _currentUser = AuthService.getCurrentUser();
+    if (await AuthService.isLoggedIn()) {
+      _currentUser = await AuthService.getCurrentUser();
     }
 
     _isLoading = false;
@@ -36,7 +37,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final success = await AuthService.login(username, password);
       if (success) {
-        _currentUser = AuthService.getCurrentUser();
+        _currentUser = await AuthService.getCurrentUser();
       } else {
         _error = '用户名或密码错误';
       }

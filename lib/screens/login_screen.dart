@@ -116,12 +116,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                           : const Text('登录'),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '提示: 用户名 admin, 密码 password',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
+                // const SizedBox(height: 16),
+                // const Text(
+                //   '提示: 用户名 admin, 密码 password',
+                //   textAlign: TextAlign.center,
+                //   style: TextStyle(color: Colors.grey, fontSize: 12),
+                // ),
               ],
             ),
           ),
