@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-import '../models/property.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/property.dart';
+import '../services/api_service.dart';
 
 class PropertyProvider with ChangeNotifier {
   List<Property> _properties = [];
@@ -13,7 +16,9 @@ class PropertyProvider with ChangeNotifier {
   }
 
   List<Property> get properties => _properties;
+
   bool get isLoading => _isLoading;
+
   String? get error => _error;
 
   Future<void> _loadProperties() async {
@@ -21,57 +26,51 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final propertiesJson = prefs.getString('properties');
+      final response = await ApiService.get('/properties');
 
-      if (propertiesJson != null) {
-        final List<dynamic> decoded = jsonDecode(propertiesJson);
-        _properties = decoded.map((item) => Property.fromMap(item)).toList();
+      if (response != null && response['code'] == 200) {
+        final List<dynamic> propertiesData = response['data'];
+        _properties =
+            propertiesData.map((item) {
+              final List<dynamic> unitsData = item['units'] ?? [];
+              final List<Unit> units =
+                  unitsData
+                      .map(
+                        (unitItem) => Unit(
+                          id: unitItem['id'],
+                          unitNumber: unitItem['unitNumber'],
+                          baseRent: double.parse(
+                            unitItem['baseRent'].toString(),
+                          ),
+                          currentTenantId: unitItem['currentTenantId'],
+                        ),
+                      )
+                      .toList();
+
+              return Property(
+                id: item['id'],
+                address: item['address'],
+                waterRate: double.parse(item['waterRate'].toString()),
+                electricityRate: double.parse(
+                  item['electricityRate'].toString(),
+                ),
+                managementFee: double.parse(item['managementFee'].toString()),
+                units: units,
+              );
+            }).toList();
       } else {
-        // Add some sample data for demo
-        _properties = [
-          Property(
-            id: '1',
-            address: '北京市海淀区中关村大街1号',
-            waterRate: 5.0,
-            electricityRate: 0.8,
-            managementFee: 200.0,
-            units: [
-              Unit(id: '101', unitNumber: '101', baseRent: 3000),
-              Unit(id: '102', unitNumber: '102', baseRent: 3200),
-              Unit(id: '201', unitNumber: '201', baseRent: 3500),
-              Unit(id: '202', unitNumber: '202', baseRent: 3800),
-            ],
-          ),
-          Property(
-            id: '2',
-            address: '上海市浦东新区张江高科技园区',
-            waterRate: 4.5,
-            electricityRate: 0.75,
-            managementFee: 180.0,
-            units: [
-              Unit(id: '101A', unitNumber: '101A', baseRent: 4000),
-              Unit(id: '102A', unitNumber: '102A', baseRent: 4200),
-              Unit(id: '201A', unitNumber: '201A', baseRent: 4500),
-            ],
-          ),
-        ];
-        await _saveProperties();
+        _error = response['message'] ?? '加载房屋数据失败';
       }
     } catch (e) {
       _error = '加载房屋数据失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
-  Future<void> _saveProperties() async {
-    final prefs = await SharedPreferences.getInstance();
-    final propertiesJson = jsonEncode(
-      _properties.map((p) => p.toMap()).toList(),
-    );
-    await prefs.setString('properties', propertiesJson);
+  Future<void> refreshProperties() async {
+    await _loadProperties();
   }
 
   Future<void> addProperty(Property property) async {
@@ -79,14 +78,33 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _properties.add(property);
-      await _saveProperties();
+      final response = await ApiService.post('/properties', {
+        'address': property.address,
+        'waterRate': property.waterRate,
+        'electricityRate': property.electricityRate,
+        'managementFee': property.managementFee,
+      });
+
+      if (response != null && response['code'] == 200) {
+        final propertyData = response['data'];
+        final newProperty = Property(
+          id: propertyData['id'],
+          address: property.address,
+          waterRate: property.waterRate,
+          electricityRate: property.electricityRate,
+          managementFee: property.managementFee,
+          units: [],
+        );
+        _properties.add(newProperty);
+      } else {
+        _error = response['message'] ?? '添加房屋失败';
+      }
     } catch (e) {
       _error = '添加房屋失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> updateProperty(Property property) async {
@@ -94,19 +112,36 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final index = _properties.indexWhere((p) => p.id == property.id);
-      if (index != -1) {
-        _properties[index] = property;
-        await _saveProperties();
+      final response = await ApiService.put('/properties/${property.id}', {
+        'address': property.address,
+        'waterRate': property.waterRate,
+        'electricityRate': property.electricityRate,
+        'managementFee': property.managementFee,
+      });
+
+      if (response != null && response['code'] == 200) {
+        final index = _properties.indexWhere((p) => p.id == property.id);
+        if (index != -1) {
+          // Keep the existing units
+          final existingUnits = _properties[index].units;
+          _properties[index] = Property(
+            id: property.id,
+            address: property.address,
+            waterRate: property.waterRate,
+            electricityRate: property.electricityRate,
+            managementFee: property.managementFee,
+            units: existingUnits,
+          );
+        }
       } else {
-        _error = '未找到要更新的房屋';
+        _error = response['message'] ?? '更新房屋失败';
       }
     } catch (e) {
       _error = '更新房屋失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> deleteProperty(String id) async {
@@ -114,14 +149,19 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _properties.removeWhere((p) => p.id == id);
-      await _saveProperties();
+      final response = await ApiService.delete('/properties/$id');
+
+      if (response != null && response['code'] == 200) {
+        _properties.removeWhere((p) => p.id == id);
+      } else {
+        _error = response['message'] ?? '删除房屋失败';
+      }
     } catch (e) {
       _error = '删除房屋失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> addUnit(String propertyId, Unit unit) async {
@@ -129,31 +169,44 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final index = _properties.indexWhere((p) => p.id == propertyId);
-      if (index != -1) {
-        final property = _properties[index];
-        final units = List<Unit>.from(property.units);
-        units.add(unit);
+      final response = await ApiService.post('/units', {
+        'propertyId': propertyId,
+        'unitNumber': unit.unitNumber,
+        'baseRent': unit.baseRent,
+      });
 
-        _properties[index] = Property(
-          id: property.id,
-          address: property.address,
-          waterRate: property.waterRate,
-          electricityRate: property.electricityRate,
-          managementFee: property.managementFee,
-          units: units,
+      if (response != null && response['code'] == 200) {
+        final unitData = response['data'];
+        final newUnit = Unit(
+          id: unitData['id'],
+          unitNumber: unit.unitNumber,
+          baseRent: unit.baseRent,
         );
 
-        await _saveProperties();
+        final index = _properties.indexWhere((p) => p.id == propertyId);
+        if (index != -1) {
+          final property = _properties[index];
+          final units = List<Unit>.from(property.units);
+          units.add(newUnit);
+
+          _properties[index] = Property(
+            id: property.id,
+            address: property.address,
+            waterRate: property.waterRate,
+            electricityRate: property.electricityRate,
+            managementFee: property.managementFee,
+            units: units,
+          );
+        }
       } else {
-        _error = '未找到要添加单元的房屋';
+        _error = response['message'] ?? '添加单元失败';
       }
     } catch (e) {
       _error = '添加单元失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> updateUnit(String propertyId, Unit unit) async {
@@ -161,14 +214,57 @@ class PropertyProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final propertyIndex = _properties.indexWhere((p) => p.id == propertyId);
-      if (propertyIndex != -1) {
-        final property = _properties[propertyIndex];
-        final unitIndex = property.units.indexWhere((u) => u.id == unit.id);
+      final response = await ApiService.put('/units/${unit.id}', {
+        'propertyId': propertyId,
+        'unitNumber': unit.unitNumber,
+        'baseRent': unit.baseRent,
+        'currentTenantId': unit.currentTenantId,
+      });
 
-        if (unitIndex != -1) {
+      if (response != null && response['code'] == 200) {
+        final propertyIndex = _properties.indexWhere((p) => p.id == propertyId);
+        if (propertyIndex != -1) {
+          final property = _properties[propertyIndex];
+          final unitIndex = property.units.indexWhere((u) => u.id == unit.id);
+
+          if (unitIndex != -1) {
+            final units = List<Unit>.from(property.units);
+            units[unitIndex] = unit;
+
+            _properties[propertyIndex] = Property(
+              id: property.id,
+              address: property.address,
+              waterRate: property.waterRate,
+              electricityRate: property.electricityRate,
+              managementFee: property.managementFee,
+              units: units,
+            );
+          }
+        }
+      } else {
+        _error = response['message'] ?? '更新单元失败';
+      }
+    } catch (e) {
+      _error = '更新单元失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteUnit(String propertyId, String unitId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.delete('/units/$unitId');
+
+      if (response != null && response['code'] == 200) {
+        final propertyIndex = _properties.indexWhere((p) => p.id == propertyId);
+        if (propertyIndex != -1) {
+          final property = _properties[propertyIndex];
           final units = List<Unit>.from(property.units);
-          units[unitIndex] = unit;
+          units.removeWhere((u) => u.id == unitId);
 
           _properties[propertyIndex] = Property(
             id: property.id,
@@ -178,52 +274,16 @@ class PropertyProvider with ChangeNotifier {
             managementFee: property.managementFee,
             units: units,
           );
-
-          await _saveProperties();
-        } else {
-          _error = '未找到要更新的单元';
         }
       } else {
-        _error = '未找到要更新单元的房屋';
-      }
-    } catch (e) {
-      _error = '更新单元失败: ${e.toString()}';
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> deleteUnit(String propertyId, String unitId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final propertyIndex = _properties.indexWhere((p) => p.id == propertyId);
-      if (propertyIndex != -1) {
-        final property = _properties[propertyIndex];
-        final units = List<Unit>.from(property.units);
-        units.removeWhere((u) => u.id == unitId);
-
-        _properties[propertyIndex] = Property(
-          id: property.id,
-          address: property.address,
-          waterRate: property.waterRate,
-          electricityRate: property.electricityRate,
-          managementFee: property.managementFee,
-          units: units,
-        );
-
-        await _saveProperties();
-      } else {
-        _error = '未找到要删除单元的房屋';
+        _error = response['message'] ?? '删除单元失败';
       }
     } catch (e) {
       _error = '删除单元失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Property? getPropertyById(String id) {

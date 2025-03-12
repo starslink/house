@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../providers/tenant_provider.dart';
+
+import '../models/tenant.dart';
 import '../providers/property_provider.dart';
 import '../providers/rent_provider.dart';
-import '../models/tenant.dart';
-import '../screens/tenant_form_screen.dart';
-import '../screens/contract_form_screen.dart';
+import '../providers/tenant_provider.dart';
 import '../screens/contract_detail_screen.dart';
+import '../screens/contract_form_screen.dart';
 import '../screens/rent_detail_screen.dart';
-import 'package:intl/intl.dart';
+import '../screens/tenant_form_screen.dart';
 
 class TenantDetailScreen extends StatelessWidget {
   final String tenantId;
