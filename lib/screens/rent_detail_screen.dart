@@ -6,7 +6,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
-import '../models/rent.dart';
 import '../providers/property_provider.dart';
 import '../providers/rent_provider.dart';
 import '../providers/tenant_provider.dart';
@@ -19,6 +18,8 @@ class RentDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('租金详情'),
@@ -82,7 +83,14 @@ class RentDetailScreen extends StatelessWidget {
           final record = rentProvider.getRentRecordById(rentRecordId);
 
           if (record == null) {
-            return const Center(child: Text('租金记录不存在'));
+            return Center(
+              child: Text(
+                '租金记录不存在',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            );
           }
 
           final property = propertyProvider.getPropertyByUnitId(record.unitId);
@@ -97,169 +105,272 @@ class RentDetailScreen extends StatelessWidget {
 
           final dateFormat = DateFormat('yyyy-MM-dd');
 
-          return SingleChildScrollView(
+          return ListView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              record.formattedMonth,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+            children: [
+              // 基本信息卡片
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    record.isPaid
-                                        ? Colors.grey[800]
-                                        : Colors.grey[400],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                record.isPaid ? '已付款' : '未付款',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
                                 ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  record.formattedMonth,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  record.isPaid ? Colors.green : Colors.orange,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              record.isPaid ? '已付款' : '未付款',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 30),
+                      if (property != null)
+                        _buildInfoRow(context, '房屋地址', property.address),
+                      if (unit != null)
+                        _buildInfoRow(context, '单元号', unit.unitNumber),
+                      if (tenant != null)
+                        _buildInfoRow(context, '租客', tenant.name),
+                      if (record.isPaid && record.paidDate != null)
+                        _buildInfoRow(
+                          context,
+                          '付款日期',
+                          dateFormat.format(record.paidDate!),
                         ),
-                        const Divider(height: 24),
-                        if (property != null) Text('房屋地址: ${property.address}'),
-                        if (unit != null) Text('单元号: ${unit.unitNumber}'),
-                        if (tenant != null) Text('租客: ${tenant.name}'),
-                        if (record.isPaid && record.paidDate != null)
-                          Text('付款日期: ${dateFormat.format(record.paidDate!)}'),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '费用明细',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+              ),
+
+              const SizedBox(height: 16),
+
+              // 费用明细卡片
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '费用明细',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Divider(height: 30),
+
+                      // 基础租金
+                      _buildFeeRow(
+                        context,
+                        '基础租金',
+                        '¥${record.baseRent.toStringAsFixed(2)}',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 水费
+                      _buildFeeRow(
+                        context,
+                        '水费',
+                        '¥${record.waterFee.toStringAsFixed(2)}',
+                        detail:
+                            '(${record.previousWaterUsage.toStringAsFixed(2)} → ${record.waterUsage.toStringAsFixed(2)} 吨, ¥${record.waterRate.toStringAsFixed(2)}/吨)',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 电费
+                      _buildFeeRow(
+                        context,
+                        '电费',
+                        '¥${record.electricityFee.toStringAsFixed(2)}',
+                        detail:
+                            '(${record.previousElectricityUsage.toStringAsFixed(2)} → ${record.electricityUsage.toStringAsFixed(2)} 度, ¥${record.electricityRate.toStringAsFixed(2)}/度)',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 管理费
+                      _buildFeeRow(
+                        context,
+                        '管理费',
+                        '¥${record.managementFee.toStringAsFixed(2)}',
+                      ),
+
+                      const Divider(height: 30),
+
+                      // 总计
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('总计'),
+                            Text('¥${record.totalRent.toStringAsFixed(2)}'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 操作按钮
+              if (!record.isPaid)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('标记为已付款'),
+                  onPressed: () async {
+                    await rentProvider.markAsPaid(rentRecordId);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('已标记为已付款'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        const Divider(height: 24),
-                        _buildFeeRow(
-                          '基础租金',
-                          '¥${record.baseRent.toStringAsFixed(2)}',
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFeeRow(
-                          '水费',
-                          '¥${record.waterFee.toStringAsFixed(2)}',
-                          detail:
-                              '(${record.previousWaterUsage.toStringAsFixed(2)} → ${record.waterUsage.toStringAsFixed(2)} 吨, ¥${record.waterRate.toStringAsFixed(2)}/吨)',
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFeeRow(
-                          '电费',
-                          '¥${record.electricityFee.toStringAsFixed(2)}',
-                          detail:
-                              '(${record.previousElectricityUsage.toStringAsFixed(2)} → ${record.electricityUsage.toStringAsFixed(2)} 度, ¥${record.electricityRate.toStringAsFixed(2)}/度)',
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFeeRow(
-                          '管理费',
-                          '¥${record.managementFee.toStringAsFixed(2)}',
-                        ),
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '总计',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              '¥${record.totalRent.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (!record.isPaid)
-                  ElevatedButton(
-                    onPressed: () async {
-                      await rentProvider.markAsPaid(rentRecordId);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('已标记为已付款')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                    ),
-                    child: const Text('标记为已付款'),
-                  ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.print),
-                  label: const Text('打印租金单'),
-                  onPressed: () {
-                    _printRentInvoice(context, record, property, unit, tenant);
+                      );
+                    }
                   },
                 ),
-              ],
-            ),
+
+              const SizedBox(height: 16),
+
+              OutlinedButton.icon(
+                icon: const Icon(Icons.print),
+                label: const Text('打印租金单'),
+                onPressed: () {
+                  _printRentInvoice(context, record, property, unit, tenant);
+                },
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildFeeRow(String label, String value, {String? detail}) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onBackground.withOpacity(0.7),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeeRow(
+    BuildContext context,
+    String label,
+    String value, {
+    String? detail,
+  }) {
+    final theme = Theme.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 80, child: Text(label)),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onBackground.withOpacity(0.7),
+            ),
+          ),
+        ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-              if (detail != null)
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (detail != null) ...[
+                const SizedBox(height: 4),
                 Text(
                   detail,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onBackground.withOpacity(0.6),
+                  ),
                 ),
+              ],
             ],
           ),
         ),
@@ -269,7 +380,7 @@ class RentDetailScreen extends StatelessWidget {
 
   Future<void> _printRentInvoice(
     BuildContext context,
-    RentRecord record,
+    dynamic record,
     dynamic property,
     dynamic unit,
     dynamic tenant,
@@ -281,6 +392,7 @@ class RentDetailScreen extends StatelessWidget {
         ),
       ),
     );
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -288,18 +400,12 @@ class RentDetailScreen extends StatelessWidget {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Center(
-                child: pw.Text(
-                  '租金收据',
-                ),
-              ),
+              pw.Center(child: pw.Text('租金收据')),
               pw.SizedBox(height: 20),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    '收据编号: ${record.id.substring(0, 8)}',
-                  ),
+                  pw.Text('收据编号: ${record.id.substring(0, 8)}'),
                   pw.Text(
                     '日期: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
                   ),
@@ -307,17 +413,13 @@ class RentDetailScreen extends StatelessWidget {
               ),
               pw.Divider(),
               pw.SizedBox(height: 10),
-              pw.Text(
-                '租金月份: ${record.formattedMonth}',
-              ),
+              pw.Text('租金月份: ${record.formattedMonth}'),
               pw.SizedBox(height: 10),
               pw.Text('房屋地址: ${property?.address ?? '未知'}'),
               pw.Text('单元号: ${unit?.unitNumber ?? '未知'}'),
               pw.Text('租客: ${tenant?.name ?? '未知'}'),
               pw.SizedBox(height: 20),
-              pw.Text(
-                '费用明细:',
-              ),
+              pw.Text('费用明细:'),
               pw.SizedBox(height: 10),
               pw.Table(
                 border: pw.TableBorder.all(),
@@ -329,24 +431,15 @@ class RentDetailScreen extends StatelessWidget {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          '项目',
-                          // style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
+                        child: pw.Text('项目'),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          '金额',
-                          // style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
+                        child: pw.Text('金额'),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          '备注',
-                          // style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
+                        child: pw.Text('备注'),
                       ),
                     ],
                   ),
@@ -384,7 +477,6 @@ class RentDetailScreen extends StatelessWidget {
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           '${record.previousWaterUsage.toStringAsFixed(2)} → ${record.waterUsage.toStringAsFixed(2)} 吨, ¥${record.waterRate.toStringAsFixed(2)}/吨',
-                          // style: const pw.TextStyle(fontSize: 10),
                         ),
                       ),
                     ],
@@ -405,7 +497,6 @@ class RentDetailScreen extends StatelessWidget {
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           '${record.previousElectricityUsage.toStringAsFixed(2)} → ${record.electricityUsage.toStringAsFixed(2)} 度, ¥${record.electricityRate.toStringAsFixed(2)}/度',
-                          // style: const pw.TextStyle(fontSize: 10),
                         ),
                       ),
                     ],
@@ -435,16 +526,12 @@ class RentDetailScreen extends StatelessWidget {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          '总计',
-                          // style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
+                        child: pw.Text('总计'),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           '¥${record.totalRent.toStringAsFixed(2)}',
-                          // style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                       ),
                       pw.Padding(
@@ -455,46 +542,6 @@ class RentDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              pw.SizedBox(height: 40),
-              // pw.Row(
-              //   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              //   children: [
-              //     pw.Column(
-              //       crossAxisAlignment: pw.CrossAxisAlignment.start,
-              //       children: [
-              //         pw.Text('收款人签名:'),
-              //         pw.SizedBox(height: 20),
-              //         pw.Container(
-              //           width: 150,
-              //           height: 1,
-              //           color: PdfColors.black,
-              //         ),
-              //       ],
-              //     ),
-              //     pw.Column(
-              //       crossAxisAlignment: pw.CrossAxisAlignment.start,
-              //       children: [
-              //         pw.Text('付款人签名:'),
-              //         pw.SizedBox(height: 20),
-              //         pw.Container(
-              //           width: 150,
-              //           height: 1,
-              //           color: PdfColors.black,
-              //         ),
-              //       ],
-              //     ),
-              //   ],
-              // ),
-              pw.SizedBox(height: 40),
-              // pw.Center(
-              //   child: pw.Text(
-              //     '感谢您的付款!',
-              //     style: const pw.TextStyle(
-              //       fontSize: 12,
-              //       color: PdfColors.grey700,
-              //     ),
-              //   ),
-              // ),
             ],
           );
         },

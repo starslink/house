@@ -40,6 +40,11 @@ class PropertyDetailScreen extends StatelessWidget {
             return const Center(child: Text('房屋信息不存在'));
           }
 
+          // 如果这里有状态更新，将其推迟
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // 在这里添加任何状态更新逻辑
+          });
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -165,7 +170,10 @@ class PropertyDetailScreen extends StatelessWidget {
                       '租客: ${tenant != null ? tenant.name : "暂无"}',
                       style: TextStyle(
                         color: tenant != null ? Colors.black : Colors.grey,
-                        fontWeight: tenant != null ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            tenant != null
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                       ),
                     ),
                   ],

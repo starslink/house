@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/rent_provider.dart';
-import '../providers/property_provider.dart';
-import '../providers/tenant_provider.dart';
-import '../models/rent.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+
+import '../models/rent.dart';
+import '../providers/property_provider.dart';
+import '../providers/rent_provider.dart';
+import '../providers/tenant_provider.dart';
 
 class RentFormScreen extends StatefulWidget {
   final String? rentRecordId;
@@ -136,13 +137,35 @@ class _RentFormScreenState extends State<RentFormScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       initialDatePickerMode: DatePickerMode.year,
+      helpText: '选择月份',
+      cancelText: '取消',
+      confirmText: '确定',
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF4E78EE),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF081A64),
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+      // 移除locale设置
     );
 
     if (picked != null) {
       setState(() {
-        _selectedMonth = DateTime(picked.year, picked.month);
+        _selectedMonth = DateTime(picked.year, picked.month, 1);
       });
     }
+  }
+
+  String _formatMonthCN(DateTime date) {
+    return DateFormat('yyyy-MM').format(date);
   }
 
   double _calculateWaterFee() {
@@ -239,7 +262,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final propertyProvider = Provider.of<PropertyProvider>(context);
 
     return Scaffold(
@@ -254,6 +277,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                 decoration: const InputDecoration(
                   labelText: '选择房屋',
                   hintText: '请选择房屋',
+                  labelStyle: TextStyle(color: Color(0xFF4E78EE)),
                 ),
                 value: _selectedPropertyId,
                 items:
@@ -281,6 +305,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                 decoration: const InputDecoration(
                   labelText: '选择单元',
                   hintText: '请选择单元',
+                  labelStyle: TextStyle(color: Color(0xFF4E78EE)),
                 ),
                 value: _selectedUnitId,
                 items:
@@ -318,12 +343,19 @@ class _RentFormScreenState extends State<RentFormScreen> {
                 decoration: const InputDecoration(
                   labelText: '月份',
                   hintText: '请选择月份',
+                  labelStyle: TextStyle(color: Color(0xFF4E78EE)),
+                  suffixIcon: Icon(
+                    Icons.calendar_month,
+                    color: Color(0xFF4E78EE),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(DateFormat('yyyy年MM月').format(_selectedMonth)),
-                    const Icon(Icons.calendar_month),
+                    Text(
+                      _formatMonthCN(_selectedMonth),
+                      style: const TextStyle(color: Color(0xFF081A64)),
+                    ),
                   ],
                 ),
               ),
@@ -331,22 +363,39 @@ class _RentFormScreenState extends State<RentFormScreen> {
             const SizedBox(height: 24),
             const Text(
               '费用信息',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF081A64),
+              ),
             ),
             const SizedBox(height: 16),
             Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('基础租金')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '基础租金',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '¥${_baseRent.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4E78EE),
+                            ),
                           ),
                         ),
                       ],
@@ -354,11 +403,18 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('上月水表读数')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '上月水表读数',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '${_previousWaterUsage.toStringAsFixed(2)} 吨',
+                            style: const TextStyle(color: Color(0xFF081A64)),
                           ),
                         ),
                       ],
@@ -366,7 +422,13 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('本月水表读数')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '本月水表读数',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: TextFormField(
@@ -374,6 +436,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                             decoration: const InputDecoration(
                               hintText: '请输入本月水表读数',
                               suffixText: '吨',
+                              labelStyle: TextStyle(color: Color(0xFF4E78EE)),
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
@@ -398,22 +461,40 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('水费单价')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '水费单价',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
-                          child: Text('¥${_waterRate.toStringAsFixed(2)}/吨'),
+                          child: Text(
+                            '¥${_waterRate.toStringAsFixed(2)}/吨',
+                            style: const TextStyle(color: Color(0xFF081A64)),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('水费小计')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '水费小计',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '¥${_calculateWaterFee().toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4E78EE),
+                            ),
                           ),
                         ),
                       ],
@@ -421,11 +502,18 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('上月电表读数')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '上月电表读数',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '${_previousElectricityUsage.toStringAsFixed(2)} 度',
+                            style: const TextStyle(color: Color(0xFF081A64)),
                           ),
                         ),
                       ],
@@ -433,7 +521,13 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('本月电表读数')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '本月电表读数',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: TextFormField(
@@ -441,6 +535,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                             decoration: const InputDecoration(
                               hintText: '请输入本月电表读数',
                               suffixText: '度',
+                              labelStyle: TextStyle(color: Color(0xFF4E78EE)),
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
@@ -466,11 +561,18 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('电费单价')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '电费单价',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '¥${_electricityRate.toStringAsFixed(2)}/度',
+                            style: const TextStyle(color: Color(0xFF081A64)),
                           ),
                         ),
                       ],
@@ -478,12 +580,21 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('电费小计')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '电费小计',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '¥${_calculateElectricityFee().toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4E78EE),
+                            ),
                           ),
                         ),
                       ],
@@ -491,12 +602,21 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        const Expanded(flex: 2, child: Text('管理费')),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '管理费',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
+                        ),
                         Expanded(
                           flex: 3,
                           child: Text(
                             '¥${_managementFee.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4E78EE),
+                            ),
                           ),
                         ),
                       ],
@@ -511,6 +631,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: Color(0xFF081A64),
                             ),
                           ),
                         ),
@@ -521,7 +642,7 @@ class _RentFormScreenState extends State<RentFormScreen> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
-                              color: Colors.blue,
+                              color: Color(0xFF4E78EE),
                             ),
                           ),
                         ),
@@ -534,6 +655,9 @@ class _RentFormScreenState extends State<RentFormScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _saveRentRecord,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4E78EE),
+              ),
               child: Text(_isEditing ? '更新' : '添加'),
             ),
             if (_isEditing) ...[
@@ -544,12 +668,18 @@ class _RentFormScreenState extends State<RentFormScreen> {
                     context: context,
                     builder:
                         (context) => AlertDialog(
-                          title: const Text('删除租金记录'),
+                          title: const Text(
+                            '删除租金记录',
+                            style: TextStyle(color: Color(0xFF081A64)),
+                          ),
                           content: const Text('确定要删除这个租金记录吗？'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('取消'),
+                              child: const Text(
+                                '取消',
+                                style: TextStyle(color: Color(0xFF4E78EE)),
+                              ),
                             ),
                             TextButton(
                               onPressed: () async {

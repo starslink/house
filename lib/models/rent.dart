@@ -35,14 +35,12 @@ class RentRecord {
 
   double get waterFee => (waterUsage - previousWaterUsage) * waterRate;
 
-  double get electricityFee => (electricityUsage - previousElectricityUsage) * electricityRate;
+  double get electricityFee =>
+      (electricityUsage - previousElectricityUsage) * electricityRate;
 
   double get totalRent => baseRent + waterFee + electricityFee + managementFee;
 
-  String get formattedMonth {
-    final DateFormat formatter = DateFormat('yyyy年MM月');
-    return formatter.format(month);
-  }
+  String get formattedMonth => DateFormat('yyyy-MM').format(month);
 
   Map<String, dynamic> toMap() {
     return {
@@ -78,7 +76,8 @@ class RentRecord {
       electricityRate: map['electricityRate'],
       managementFee: map['managementFee'],
       isPaid: map['isPaid'],
-      paidDate: map['paidDate'] != null ? DateTime.parse(map['paidDate']) : null,
+      paidDate:
+          map['paidDate'] != null ? DateTime.parse(map['paidDate']) : null,
     );
   }
 }

@@ -75,8 +75,9 @@ class Tenant {
       return '无租约';
     }
 
-    final DateFormat formatter = DateFormat('yyyy年MM月dd日');
-    return '${formatter.format(leaseStartDate!)} 至 ${formatter.format(leaseEndDate!)}';
+    // 使用通用格式而不是中文本地化
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    return '${dateFormat.format(leaseStartDate!)} 至 ${dateFormat.format(leaseEndDate!)}';
   }
 }
 
