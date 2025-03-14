@@ -13,20 +13,27 @@ class AuthProvider with ChangeNotifier {
   }
 
   User? get currentUser => _currentUser;
+
   bool get isLoading => _isLoading;
+
   String? get error => _error;
+
   bool get isAuthenticated => _currentUser != null;
 
   Future<void> _initialize() async {
     _isLoading = true;
     notifyListeners();
 
-    if (await AuthService.isLoggedIn()) {
-      _currentUser = await AuthService.getCurrentUser();
+    try {
+      if (await AuthService.isLoggedIn()) {
+        _currentUser = await AuthService.getCurrentUser();
+      }
+    } catch (e) {
+      _error = '初始化失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<bool> login(String username, String password) async {
@@ -38,12 +45,15 @@ class AuthProvider with ChangeNotifier {
       final success = await AuthService.login(username, password);
       if (success) {
         _currentUser = await AuthService.getCurrentUser();
+        _isLoading = false;
+        notifyListeners();
+        return true;
       } else {
         _error = '用户名或密码错误';
+        _isLoading = false;
+        notifyListeners();
+        return false;
       }
-      _isLoading = false;
-      notifyListeners();
-      return success;
     } catch (e) {
       _error = '登录失败: ${e.toString()}';
       _isLoading = false;
